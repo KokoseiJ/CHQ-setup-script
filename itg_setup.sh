@@ -108,7 +108,11 @@ cp /home/dance/.profile /home/dance/.profile.bak
 
 tee -a /home/dance/.profile <<EOF
 
-# Added by ITG setup script
+# ===== Added by ITG setup script =====
+
+depmod -a
+modprobe piuio
+
 echo "
 
 	*********************************
