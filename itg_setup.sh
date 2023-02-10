@@ -16,7 +16,7 @@ apt update && apt upgrade -y
 
 # No pulseaudio!
 apt-mark hold pulseaudio pulseaudio-utils pavucontrol
-apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils apulse xorg xfce4 gcc make xz-utils
+apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils xorg xfce4 gcc make xz-utils
 
 # apt install -y openssl-server
 # apt install -y vim curl wget git sudo
@@ -41,8 +41,9 @@ cd /home/dance
 mkdir -p src && cd src
 git clone https://github.com/DinsFire64/piuio && cd piuio/mod
 make KDIR=/usr/src/linux-headers-*liquorix*
+# Since we're not yet running on liquorix kernel we have to juggle around
 make DESTDIR=/home/dance/src/piuio/install install
-mv $(find /home/dance/src/piuio -name "updates") /lib/modules/*liquorix*/
+mv $(find /home/dance/src/piuio -name "updates") /lib/modules/*liquorix*
 rm -rf /home/dance/src/piuio/install
 cd /home/dance
 
@@ -114,7 +115,7 @@ echo "
 	*      ITG Starting Up....      *
 	*                               *
 	* Barry & Koko & Vika was here! *
-	*          2022 ~ 2023          *
+	*        VRG 2022 ~ 2023        *
 	*********************************
 
 "
