@@ -40,8 +40,10 @@ update-grub
 cd /home/dance
 mkdir -p src && cd src
 git clone https://github.com/DinsFire64/piuio && cd piuio/mod
-make KDIR=/usr/src/linux-headers-*liquorix* KVER=$(echo /usr/src/linux-headers-*liquorix* | sed "s/\/usr\/src\/linux-headers-//")
-make KDIR=/usr/src/linux-headers-*liquorix* KVER=$(echo /usr/src/linux-headers-*liquorix* | sed "s/\/usr\/src\/linux-headers-//") install
+make KDIR=/usr/src/linux-headers-*liquorix*
+make DESTDIR=/home/dance/src/piuio/install install
+mv $(find /home/dance/src/piuio -name "updates") /lib/modules/*liquorix*/
+rm -rf /home/dance/src/piuio/install
 cd /home/dance
 
 # Setup autologin
