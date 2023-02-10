@@ -24,7 +24,7 @@ usermod -aG sudo,adm,systemd-journal dance
 
 # Installs a kernel and sets up GRUB for maintenance
 curl 'https://liquorix.net/install-liquorix.sh' | bash
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAILT=\"\"/' /etc/default/grub
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"\"/' /etc/default/grub
 sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/' /etc/default/grub
 update-grub
 
