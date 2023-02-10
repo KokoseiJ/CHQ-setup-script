@@ -13,11 +13,14 @@
 # Erase CD-ROM source and install packages
 sed -i "s/#\? \?deb cdrom\:.*//" /etc/apt/sources.list
 apt update && apt upgrade -y
-apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils xorg xfce4 gcc make xz-utils
+
+# No pulseaudio!
+apt-mark hold pulseaudio pulseaudio-utils pavucontrol
+apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils apulse xorg xfce4 gcc make xz-utils
 
 # apt install -y openssl-server
 # apt install -y vim curl wget git sudo
-usermod -aG sudo dance
+usermod -a -G sudo -G adm -G systemd-journal dance
 
 # Installs a kernel and sets up GRUB for maintenance
 curl 'https://liquorix.net/install-liquorix.sh' | bash
@@ -93,5 +96,6 @@ chmod +x /home/dance/.xinitrc
 chmod +x /home/dance/.profile
 
 # Time to see if everything went to plan!
+apt autoremove -y
 chown -R dance:dance /home/dance
 init 6
