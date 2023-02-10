@@ -112,6 +112,8 @@ tee -a /home/dance/.profile <<EOF
 
 depmod -a
 modprobe piuio
+modinfo piuio
+lsmod | grep piuio
 
 echo "
 
