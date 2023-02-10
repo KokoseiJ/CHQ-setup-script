@@ -10,6 +10,9 @@
 ##
 ## TODO: USB profile setup, polling rate, x11 shortcuts for maintenance
 
+# Erase CD-ROM source and install packages
+sed -i "s/#\? \?deb cdrom\:.*//" /etc/apt/sources.list
+apt update && apt upgrade -y
 apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils xorg xfce4 gcc make xz-utils
 
 # apt install -y openssl-server
@@ -17,7 +20,7 @@ apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils x
 usermod -aG sudo dance
 
 # Installs a kernel and sets up GRUB for maintenance
-curl 'https://liquorix.net/install-liquorix.sh' | sudo bash
+curl 'https://liquorix.net/install-liquorix.sh' | bash
 sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAILT=\"\"/' /etc/default/grub
 sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/' /etc/default/grub
 update-grub
@@ -32,7 +35,7 @@ make KDIR=/usr/src/linux-headers-*liquorix* KVER=$(echo /usr/src/linux-headers-*
 cd /home/dance
 
 # Setup autologin
-sed -i "s/#\?NAutoVTs=[0-9]\+/NAutoVTs=1/"
+sed -i "s/#\?NAutoVTs=[0-9]\+/NAutoVTs=1/" /etc/systemd/logind.conf
 # /etc/systemd/system/getty@tty1.service.d/override.conf
 mkdir -p /etc/systemd/system/getty@tty1.service.d
 
@@ -81,7 +84,7 @@ exec startxfce4
 EOF
 
 tee -a /home/dance/.profile <<EOF
-if [ -z "${DISPLAY}" ] && [ "${XDG_VTNR}" -eq 1 ]; then
+if [ -z "\${DISPLAY}" ] && [ "\${XDG_VTNR}" -eq 1 ]; then
   exec startx
 fi
 EOF
@@ -90,4 +93,5 @@ chmod +x /home/dance/.xinitrc
 chmod +x /home/dance/.profile
 
 # Time to see if everything went to plan!
+chown -R dance:dance /home/dance
 init 6
