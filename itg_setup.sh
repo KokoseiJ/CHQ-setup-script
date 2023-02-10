@@ -26,6 +26,13 @@ usermod -aG sudo,adm,systemd-journal dance
 curl 'https://liquorix.net/install-liquorix.sh' | bash
 sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"\"/' /etc/default/grub
 sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/' /etc/default/grub
+
+# Fun stuff- grub background as ITG2 :P
+curl -L "https://github.com/JoseVarelaP/In-The-Groove2-SM5/raw/master/Graphics/ITG2%20Common%20fallback%20background.png" > /boot/itg2.png
+tee -a /etc/default/grub <<EOF
+GRUB_BACKGROUND=/boot/itg2.png
+EOF
+
 update-grub
 
 # Install PIUIO
