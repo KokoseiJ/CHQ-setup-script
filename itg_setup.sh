@@ -45,8 +45,7 @@ ExecStart=
 ExecStart=-/sbin/agetty --noclear --autologin dance %I \$TERM
 EOF
 
-systemctl daemon-reload
-systemcl enable getty@tty1.service
+systemctl daemon-reload && systemctl enable getty@tty1.service
 
 # Setup ALSA, some systems (Including CHQ cab) have a main device that is not
 # what the speaker is connected to, like graphics card
@@ -83,6 +82,7 @@ thunar &
 exec startxfce4
 EOF
 
+cp /home/dance/.profile /home/dance/.profile.bak
 tee -a /home/dance/.profile <<EOF
 if [ -z "\${DISPLAY}" ] && [ "\${XDG_VTNR}" -eq 1 ]; then
   exec startx
