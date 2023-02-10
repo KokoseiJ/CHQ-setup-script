@@ -87,6 +87,16 @@ EOF
 
 cp /home/dance/.profile /home/dance/.profile.bak
 tee -a /home/dance/.profile <<EOF
+
+echo "
+\t*********************************
+\t*      ITG Starting Up....      *
+\t*                               *
+\t* Barry & Koko & Vika was here! *
+\t*          2022 ~ 2023          *
+\t*********************************
+"
+
 if [ -z "\${DISPLAY}" ] && [ "\${XDG_VTNR}" -eq 1 ]; then
   exec startx
 fi
@@ -98,4 +108,6 @@ chmod +x /home/dance/.profile
 # Time to see if everything went to plan!
 apt autoremove -y
 chown -R dance:dance /home/dance
+
+read
 init 6
