@@ -5,8 +5,8 @@
 ##    This is a test script, will prepare system to be up and running
 ##  state but not quite enough for production run.
 ##    This script assumes that the system is freshly installed debian,
-##  with `dance` user for running ITG and `/songs` folder mounted to
-##  a partition with songs.
+##  with `dance` user for running ITG and `/mnt/stepmania` with
+##  `/mnt/songs` partitions mounted.
 ##
 ## TODO: USB profile setup, polling rate, x11 shortcuts for maintenance
 
@@ -20,7 +20,7 @@ apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils a
 
 # apt install -y openssl-server
 # apt install -y vim curl wget git sudo
-usermod -a -G sudo -G adm -G systemd-journal dance
+usermod -aG sudo,adm,systemd-journal dance
 
 # Installs a kernel and sets up GRUB for maintenance
 curl 'https://liquorix.net/install-liquorix.sh' | bash
@@ -69,11 +69,20 @@ EOF
 chmod +x /home/dance/.xserverrc
 
 # Setup ITGMania!
-cd /home/dance
+cd /mnt/stepmania
 curl -L https://github.com/itgmania/itgmania/releases/download/v0.5.1/ITGmania-0.5.1-Linux-no-songs.tar.gz | tar -xzf -
 mv ITGmania-*/itgmania .
 rm -rf ITGmania-*
-cd /home/dance
+ln -s /mnt/stepmania/itgmania /home/dance/itgmania
+mkdir -p /mnt/stepmania/itgmania_saves
+ln -s /mnt/stepmania/itgmania_saves /home/dance/.itgmania
+
+# Link songs folders to /home
+mkdir -p /mnt/songs/Songs
+mkdir -p /mnt/songs/Courses
+rm -rf /home/dance/itgmania/Songs /home/dance/itgmania/Courses
+ln -s /mnt/songs/Songs /home/dance/itgmania/Songs
+ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
 
 # Setup stepmania autostart
 # TODO: Add Caps lock check
@@ -86,19 +95,24 @@ exec startxfce4
 EOF
 
 cp /home/dance/.profile /home/dance/.profile.bak
+
 tee -a /home/dance/.profile <<EOF
 
+# Added by ITG setup script
 echo "
-\t*********************************
-\t*      ITG Starting Up....      *
-\t*                               *
-\t* Barry & Koko & Vika was here! *
-\t*          2022 ~ 2023          *
-\t*********************************
+
+	*********************************
+	*      ITG Starting Up....      *
+	*                               *
+	* Barry & Koko & Vika was here! *
+	*          2022 ~ 2023          *
+	*********************************
+
 "
+sleep 3
 
 if [ -z "\${DISPLAY}" ] && [ "\${XDG_VTNR}" -eq 1 ]; then
-  exec startx
+  exec xinit
 fi
 EOF
 
@@ -108,6 +122,10 @@ chmod +x /home/dance/.profile
 # Time to see if everything went to plan!
 apt autoremove -y
 chown -R dance:dance /home/dance
+chown -R dance:dance /mnt/songs
+chown -R dance:dance /mnt/stepmania
 
-read
+echo "Setup has been completed. The system will reboot in 10 seconds.
+Please review changes after the system restarts."
+sleep 10
 init 6
