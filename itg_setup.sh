@@ -42,9 +42,14 @@ mkdir -p src && cd src
 git clone https://github.com/DinsFire64/piuio && cd piuio/mod
 make KDIR=/usr/src/linux-headers-*liquorix*
 # Since we're not yet running on liquorix kernel we have to juggle around
-make DESTDIR=/home/dance/src/piuio/install install
+# you MUST run depmod -a at least once after rebooting!
+make KDIR=/usr/src/linux-headers-*liquorix* DESTDIR=/home/dance/src/piuio/install install
 mv $(find /home/dance/src/piuio -name "updates") /lib/modules/*liquorix*
 rm -rf /home/dance/src/piuio/install
+tee -a /etc/modules <<EOF
+piuio
+EOF
+
 cd /home/dance
 
 # Setup autologin
@@ -110,11 +115,6 @@ tee -a /home/dance/.profile <<EOF
 
 # ===== Added by ITG setup script =====
 
-depmod -a
-modprobe piuio
-modinfo piuio
-lsmod | grep piuio
-
 echo "
 
 	*********************************
@@ -142,6 +142,14 @@ chown -R dance:dance /mnt/songs
 chown -R dance:dance /mnt/stepmania
 
 echo "Setup has been completed. The system will reboot in 10 seconds.
-Please review changes after the system restarts."
+Press Ctrl+C now to return to shell and review changes.
+
+!!! PIUIO driver installation is not done yet !!!
+You MUST run \`depmod -a\` and \`modprobe piuio\` to
+load the driver at least once.
+After running depmod, it should load on boot automatically.
+
+GLHF!
+    -koko"
 sleep 10
 init 6
