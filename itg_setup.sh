@@ -24,13 +24,16 @@ usermod -aG sudo,adm,systemd-journal dance
 
 # Installs a kernel and sets up GRUB for maintenance
 curl 'https://liquorix.net/install-liquorix.sh' | bash
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"\"/' /etc/default/grub
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"video=VGA-1:640x480@60\"/' /etc/default/grub
 sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/' /etc/default/grub
+
 
 # Fun stuff- grub background as ITG2 :P
 curl -L "https://github.com/JoseVarelaP/In-The-Groove2-SM5/raw/master/Graphics/ITG2%20Common%20fallback%20background.png" > /boot/itg2.png
 tee -a /etc/default/grub <<EOF
 GRUB_BACKGROUND=/boot/itg2.png
+GRUB_GFXMODE=640x480
+GRUB_GFXPAYLOAD_LINUX=keep
 EOF
 
 update-grub
@@ -75,6 +78,15 @@ usermod -aG audio dance
 # Setup Xserver, full installation of xfce4 might be changed to something else
 # apt install -y xorg xfce4
 systemctl set-default multi-user.target
+
+tee /etc/X11/xorg.conf.d/10-kortekcrt.conf <<EOF
+Section "Monitor"
+	Identifier 	"VGA-0"
+	HorizSync 	30.0-40.0
+	VertRefresh 	47.0-160.0
+	Option 		"PreferredMode" "640x480"
+EndSection
+EOF
 
 tee /home/dance/.xserverrc <<EOF
 #!/bin/sh
