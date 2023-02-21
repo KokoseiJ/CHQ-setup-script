@@ -24,7 +24,7 @@ usermod -aG sudo,adm,systemd-journal dance
 
 # Installs a kernel and sets up GRUB for maintenance
 curl 'https://liquorix.net/install-liquorix.sh' | bash
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"video=VGA-1:640x480@60\"/' /etc/default/grub
+sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"video=VGA-1:640x480\"/' /etc/default/grub
 sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/' /etc/default/grub
 
 
@@ -116,9 +116,9 @@ ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
 
 tee /home/dance/.xinitrc <<EOF
 #!/bin/sh
+startxfce4 &
 itgmania/itgmania
-thunar &
-exec startxfce4
+thunar
 EOF
 
 cp /home/dance/.profile /home/dance/.profile.bak
