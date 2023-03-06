@@ -155,7 +155,9 @@ if [ -z $DISPLAY ] && [ $(tty) = "/dev/tty1" ]; then
 
   "
   sleep 3
-  exec xinit
+  # Append exec to make the tty die when session dies.
+  # Without it user gets kicked out to tty when xfce gets logged out
+  xinit
 fi
 EOF
 
