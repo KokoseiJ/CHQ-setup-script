@@ -16,7 +16,7 @@ apt update && apt upgrade -y
 
 # No pulseaudio!
 apt-mark hold pulseaudio pulseaudio-utils pavucontrol
-apt install -y vim curl wget git sudo libasound2 libasound2-plugins alsa-utils xorg xfce4 gcc make xz-utils
+apt install -y vim curl wget git sudo libasound2 libasound2-plugins apulse alsa-utils xorg xfce4 openbox gcc make xz-utils
 
 # apt install -y openssl-server
 # apt install -y vim curl wget git sudo
@@ -72,11 +72,11 @@ systemctl daemon-reload && systemctl enable getty@tty1.service
 # what the speaker is connected to, like graphics card
 # This can be corrected by either specifying the correct device to be default,
 # or changing modprobe.d/sound to force the correct device driver to load first
-# apt install -y libasound2 libasound2-plugins alsa-utils
+# apt install -y libasound2 libasound2-plugins alsa-utils apulse
 usermod -aG audio dance
 
 # Setup Xserver, full installation of xfce4 might be changed to something else
-# apt install -y xorg xfce4
+# apt install -y xorg xfce4 openbox
 systemctl set-default multi-user.target
 
 tee /etc/X11/xorg.conf.d/10-kortekcrt.conf <<EOF
@@ -112,13 +112,29 @@ ln -s /mnt/songs/Songs /home/dance/itgmania/Songs
 ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
 
 # Setup stepmania autostart
-# TODO: Add Caps lock check
+tee /home/dance/start.sh <<EOF
+#!/bin/bash
+while [ -z $(xset q | grep -oE "Caps Lock:[[:space:]]+on") ]
+do
+	itgmania/itgmania
+done
+
+xdotool key Caps_Lock
+
+xfdesktop &
+xfce4-panel &
+exec thunar
+EOF
 
 tee /home/dance/.xinitrc <<EOF
 #!/bin/sh
-startxfce4 &
-itgmania/itgmania
-thunar
+exec openbox-session
+EOF
+
+mkdir -p /home/dance/.config/openbox
+tee /home/dance/.config/openbox/autostart <<EOF
+#!/bin/bash
+exec ~/start.sh
 EOF
 
 cp /home/dance/.profile /home/dance/.profile.bak
@@ -127,7 +143,8 @@ tee -a /home/dance/.profile <<EOF
 
 # ===== Added by ITG setup script =====
 
-echo "
+if [ -z $DISPLAY ] && [ $(tty) = "/dev/tty1" ]; then
+  echo "
 
 	*********************************
 	*      ITG Starting Up....      *
@@ -136,16 +153,16 @@ echo "
 	*        VRG 2022 ~ 2023        *
 	*********************************
 
-"
-sleep 3
-
-if [ -z "\${DISPLAY}" ] && [ "\${XDG_VTNR}" -eq 1 ]; then
+  "
+  sleep 3
   exec xinit
 fi
 EOF
 
 chmod +x /home/dance/.xinitrc
 chmod +x /home/dance/.profile
+chmod +x /home/dance/start.sh
+chmod +x /home/dance/.config/openbox/autostart
 
 # Time to see if everything went to plan!
 apt autoremove -y
