@@ -114,6 +114,7 @@ ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
 # Setup stepmania autostart
 tee /home/dance/start.sh <<EOF
 #!/bin/bash
+xsetroot -solid '#2F68A6'
 while [ -z $(xset q | grep -oE "Caps Lock:[[:space:]]+on") ]
 do
 	itgmania/itgmania
