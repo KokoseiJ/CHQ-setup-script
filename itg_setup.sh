@@ -144,7 +144,7 @@ tee -a /home/dance/.profile <<EOF
 
 # ===== Added by ITG setup script =====
 
-if [ -z $DISPLAY ] && [ $(tty) = "/dev/tty1" ]; then
+if [ -z $DISPLAY ] && [ \$(tty) = "/dev/tty1" ]; then
   echo "
 
 	*********************************
