@@ -19,7 +19,7 @@ install_ITGmania () {
     curl -L $ITGmania_url | tar -xzf -
 
     mkdir -p /mnt/stepmania/itgmania
-    mv ITGmania-*/itgmania/* /mnt/stepmania/itgmania/
+    cp -a ITGmania-*/itgmania/* /mnt/stepmania/itgmania/
     rm -rf ITGmania-*
 }
 installs+=("install_ITGmania")
@@ -73,6 +73,7 @@ install_scripts () {
     wget https://gist.githubusercontent.com/KokoseiJ/cbacf48bdc24e060386251a29aae4914/raw/usbprofileconfig.py
     chmod +x usbprofileconfig.py
 }
+installs+=("install_scripts")
 
 
 install_sensord () {
@@ -131,7 +132,7 @@ config_CRT () {
     # GFXMODE helps set the framebuffer resolution. This sets the resolution for GRUB and tty framebuffer until KMS kicks in.
     
     if grep "GRUB_GFXMODE=" /etc/default/grub > /dev/null; then
-        sed -i "s/#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=640x480/"
+        sed -i "s/#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=640x480/" /etc/default/grub
         tee -a /etc/default/grub <<EOF
 GRUB_GFXPAYLOAD_LINUX=keep
 EOF
@@ -256,6 +257,8 @@ config_openbox () {
 # ===== Added by ITG setup script =====
 
 if [ -z \$DISPLAY ] && [ \$(tty) = "/dev/tty1" ]; then
+  clear
+  printf "\n\n\n\n\n\n\n\n\n\n\n"
   echo "
                        **********************************
                        *       ITG Starting Up...       *
