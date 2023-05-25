@@ -133,14 +133,12 @@ config_CRT () {
     
     if grep "GRUB_GFXMODE=" /etc/default/grub > /dev/null; then
         sed -i "s/#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=640x480/" /etc/default/grub
-        tee -a /etc/default/grub <<EOF
-GRUB_GFXPAYLOAD_LINUX=keep
-EOF
     else
-        tee -a /etc/default/grub <<EOF
-GRUB_GFXMODE=640x480
-GRUB_GFXPAYLOAD_LINUX=keep
-EOF
+        echo "GRUB_GFXMODE=640x480" | tee -a /etc/default/grub
+    fi
+
+    if ! grep "GRUB_GFXPAYLOAD_LINUX=" /etc/default/grub > /dev/null; then
+        echo "GRUB_GFXPAYLOAD_LINUX=keep" | tee -a /etc/default/grub
     fi
 
     # video argument for linux cmdline overrides KMS config, which doesn't work since CRT obviously lacks EDID info.
@@ -170,9 +168,7 @@ config_grub() {
 
     if ! grep "GRUB_BACKGROUND=" /etc/default/grub > /dev/null; then
         curl -L "https://github.com/JoseVarelaP/In-The-Groove2-SM5/raw/master/Graphics/ITG2%20Common%20fallback%20background.png" > /boot/itg2.png
-        tee -a /etc/default/grub <<EOF
-GRUB_BACKGROUND=/boot/itg2.png
-EOF
+        echo "GRUB_BACKGROUND=/boot/itg2.png" | tee -a /etc/default/grub
     fi
 
     update-grub
@@ -308,10 +304,9 @@ configs+=("config_openbox")
 config_user() {
     usermod -aG sudo,adm,systemd-journal,audio dance
 
-    tee -a <<EOF
-dance ALL=(ALL) NOPASSWD: ALL
-EOF
-
+    if ! grep "dance" /etc/sudoers > /dev/null; then
+        echo "dance ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+    fi
 }
 configs+=("config_user")
 
@@ -396,7 +391,7 @@ Press Ctrl+C now to return to shell and review changes.
 
 Kernel is NOT update and WILL NOT BE updated until you manually do so!
 If you update the kernel, DO RUN THE SCRIPT AGAIN!
-PIUIO needs to be manually reinstalled.
+PIUIO needs to be manually reinstalled, and pads will NOT WORK before that.
 
 GLHF!
     -koko"
