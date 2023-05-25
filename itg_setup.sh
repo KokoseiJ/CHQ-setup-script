@@ -86,6 +86,7 @@ install_sensord () {
     else
         git clone --depth 1 https://github.com/lm-sensors/lm-sensors
         cd lm-sensors
+    fi
 
     make PROG_EXTRA=sensord all-prog-sensord
     make PROG_EXTRA=sensord install-prog-sensord
@@ -95,8 +96,8 @@ installs+=("install_sensord")
 
 
 config_ITGmania () {
-    if [ -d /home/dance/itgmania ]; then rm -rf /home/dance/itgmania; done
-    if [ -d /home/dance/.itgmania ]; then rm -rf /home/dance/.itgmania; done
+    if [ -d /home/dance/itgmania ]; then rm -rf /home/dance/itgmania; fi
+    if [ -d /home/dance/.itgmania ]; then rm -rf /home/dance/.itgmania; fi
 
     ln -s /mnt/stepmania/itgmania /home/dance/itgmania
     mkdir -p /mnt/stepmania/itgmania_saves
