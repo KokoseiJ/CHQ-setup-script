@@ -3,10 +3,20 @@ configs=()
 
 
 install_ITGmania () {
+    if [ -d /mnt/stepmania/itgmania ]; then
+        echo "Seems like ITGmania is already installed. Do you want to update it to newer version?"
+        echo "WARNING: This will overwrite the directory with new version!"
+        read -p "Proceed? (y/n): " -n1 ANSWER
+        echo
+        if [ $ANSWER = "n" -o  $ANSWER = "N" ]; then return 0; fi
+    fi
+
     latest_tag=$(curl -Ls -o /dev/null -w %{url_effective}\\n https://github.com/itgmania/itgmania/releases/latest | grep -oE "([0-9]+\.?)+")
     ITGmania_url="https://github.com/itgmania/itgmania/releases/download/v${latest_tag}/ITGmania-${latest_tag}-Linux-no-songs.tar.gz"
 
-    curl $ITGmania_url | tar -xzf -
+    cd /tmp
+
+    curl -L $ITGmania_url | tar -xzf -
 
     mkdir -p /mnt/stepmania/itgmania
     mv ITGmania-*/itgmania/* /mnt/stepmania/itgmania/
@@ -20,6 +30,7 @@ install_PIUIO () {
     cd /home/dance/src
 
     if [ -d /home/dance/src/piuio ]; then
+        chown -R root:root piuio
         cd piuio
         git pull
         cd mod
@@ -39,6 +50,7 @@ install_evhz () {
     cd /home/dance/src
 
     if [ -d /home/dance/src/evhz ]; then
+        chown -R root:root evhz
         cd evhz
         git pull
     else
@@ -55,6 +67,9 @@ installs+=("install_evhz")
 
 
 config_ITGmania() {
+    if [ -d /home/dance/itgmania ]; then rm -rf /home/dance/itgmania; done
+    if [ -d /home/dance/.itgmania ]; then rm -rf /home/dance/.itgmania; done
+
     ln -s /mnt/stepmania/itgmania /home/dance/itgmania
     mkdir -p /mnt/stepmania/itgmania_saves
     ln -s /mnt/stepmania/itgmania_saves /home/dance/.itgmania
@@ -62,10 +77,11 @@ config_ITGmania() {
     mkdir -p /mnt/songs/Songs
     mkdir -p /mnt/songs/Courses
     rm -rf /home/dance/itgmania/Songs /home/dance/itgmania/Courses
+
     ln -s /mnt/songs/Songs /home/dance/itgmania/Songs
     ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
 
-    chown -R dance:dance /mnt/itgmania
+    chown -R dance:dance /mnt/stepmania
     chown -R dance:dance /mnt/songs
 }
 configs+=("config_ITGmania")
@@ -85,7 +101,12 @@ config_CRT () {
     # Since dedicabs are usually running on CRT, there are some tricks needed to make the screen function properly
     # GFXMODE helps set the framebuffer resolution. This sets the resolution for GRUB and tty framebuffer until KMS kicks in.
     
-    if ! grep "GRUB_GFXMODE=" /etc/default/grub > /dev/null; then
+    if grep "GRUB_GFXMODE=" /etc/default/grub > /dev/null; then
+        sed -i "s/#\?GRUB_GFXMODE=.*/GRUB_GFXMODE=640x480/"
+        tee -a /etc/default/grub <<EOF
+GRUB_GFXPAYLOAD_LINUX=keep
+EOF
+    else
         tee -a /etc/default/grub <<EOF
 GRUB_GFXMODE=640x480
 GRUB_GFXPAYLOAD_LINUX=keep
@@ -112,7 +133,8 @@ configs+=("config_CRT")
 
 
 config_grub() {
-    sed -i "s/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/"
+    sed -i "s/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/" /etc/default/grub
+    sed -i "s/quiet \?//g" /etc/default/grub
 
     # Fun stuff: GRUB background as ITG2 :P
 
@@ -123,18 +145,42 @@ GRUB_BACKGROUND=/boot/itg2.png
 EOF
     fi
 
-    grub-update
+    update-grub
 }
 configs+=("config_grub")
+
+
+config_autologin () {
+    systemctl set-default multi-user.target
+
+    # Configures logind to open only single virtual terminal on startup
+    sed -i "s/#\?NAutoVTs=[0-9]\+/NAutoVTs=1/" /etc/systemd/logind.conf
+
+    # Creates getty drop-in for autologin
+    mkdir -p /etc/systemd/system/getty@tty1.service.d
+    tee /etc/systemd/system/getty@tty1.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --noclear --autologin dance tty1 \$TERM
+EOF
+
+}
+configs+=("config_autologin")
 
 
 config_keybinds () {
     tee /home/dance/.xbindkeysrc <<EOF
 "uxterm"
-ctrl + alt + t
+Control+alt + t
+Mod4 + t
 
-"/home/dance/tools/evhz"
-ctrl + e
+"uxterm -e sudo /home/dance/tools/evhz"
+Mod4 + e
+Control + e
+
+"/home/dance/start.sh"
+Mod4 + s
+Control + s
 EOF
 
 }
@@ -162,24 +208,6 @@ EOF
 configs+=("config_xinit")
 
 
-config_autologin () {
-    systemctl set-default multi-user.target
-
-    # Configures logind to open only single virtual terminal on startup
-    sed -i "s/#\?NAutoVTs=[0-9]\+/NAutoVTs=1/" /etc/systemd/logind.conf
-
-    # Creates getty drop-in for autologin
-    mkdir -p /etc/systemd/system/getty@tty1.service.d
-    tee /etc/systemd/system/getty@tty1.service.d/override.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --noclear --autologin dance tty1 \$TERM
-EOF
-
-}
-configs+=("config_autologin")
-
-
 config_openbox () {
     # Autostart x11 on startup
     if [ -e /home/dance/.profile.bak ]; then
@@ -192,7 +220,7 @@ config_openbox () {
 
 # ===== Added by ITG setup script =====
 
-if [ -z \$DISPLAY ] && [ \$(tty) -eq "/dev/tty1" ]; then
+if [ -z \$DISPLAY ] && [ \$(tty) = "/dev/tty1" ]; then
   echo "
                        **********************************
                        *       ITG Starting Up...       *
@@ -221,12 +249,13 @@ EOF
     tee /home/dance/start.sh <<EOF
 #!/bin/bash
 
-while [ -z $(xset q | grep -oE "Caps Lock:[[:space:]]+on") ]
+while [ -z \$(xset q | grep -oE "Caps Lock:[[:space:]]+on") ]
 do
     itgmania/itgmania
 done
 
 xdotool key Caps_Lock
+
 thunar &
 EOF
 
@@ -238,8 +267,12 @@ configs+=("config_openbox")
 
 
 config_user() {
-    chown -R dance:dance /home/dance
     usermod -aG sudo,adm,systemd-journal,audio dance
+
+    tee -a <<EOF
+dance ALL=(ALL) NOPASSWD: ALL
+EOF
+
 }
 configs+=("config_user")
 
@@ -253,7 +286,7 @@ startup () {
         sudo vim curl wget \
         linux-headers-$(uname -r) \
         git make gcc \
-        xorg openbox tint2 \
+        xorg openbox tint2 thunar \
         libasound2 apulse \
         libopengl0 libpulse0 \
         xdotool xbindkeys
@@ -262,17 +295,17 @@ startup () {
 
 cleanup () {
     apt autoremove -y
+    chown -R dance:dance /home/dance
 }
 
-"""
-memo: use xbindkeys config for shortcuts
-make a function for initializing each config
-xsetroot -solid "#3A6EA5"
-use openbox + tint2, install only thunar for file explorer
-use xterm fancy terminals don't work well on CRT
-libpulse0 and libopengl0 needed for barebone installation
-maybe setup NetworkManager wifi setting script?
-"""
+
+#memo: use xbindkeys config for shortcuts
+#make a function for initializing each config
+#xsetroot -solid "#3A6EA5"
+#use openbox + tint2, install only thunar for file explorer
+#use xterm fancy terminals don't work well on CRT
+#libpulse0 and libopengl0 needed for barebone installation
+#maybe setup NetworkManager wifi setting script?
 
 
 startup
@@ -283,6 +316,7 @@ for i in "${!installs[@]}"; do
     ${installs[$i]}
 
     printf "\\n[*] Finished ${installs[$i]}\\n"
+done
 
 
 for i in "${!configs[@]}"; do
@@ -291,9 +325,11 @@ for i in "${!configs[@]}"; do
     ${configs[$i]}
 
     printf "\\n[*] Finished ${configs[$i]}\\n"
+done
 
 cleanup
 
+echo
 echo "Setup has been completed. The system will reboot in 10 seconds.
 Press Ctrl+C now to return to shell and review changes.
 
