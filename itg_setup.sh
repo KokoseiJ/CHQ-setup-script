@@ -66,7 +66,35 @@ install_evhz () {
 installs+=("install_evhz")
 
 
-config_ITGmania() {
+install_scripts () {
+    mkdir -p /home/dance/tools
+    cd /home/dance/tools
+
+    wget https://gist.githubusercontent.com/KokoseiJ/cbacf48bdc24e060386251a29aae4914/raw/usbprofileconfig.py
+    chmod +x usbprofileconfig.py
+}
+
+
+install_sensord () {
+    mkdir -p /home/dance/src
+    cd /home/dance/src
+
+    if [ -d /home/dance/src/lm-sensors ]; then
+        chown -R root:root lm-sensors
+        cd lm-sensors
+        git pull
+    else
+        git clone --depth 1 https://github.com/lm-sensors/lm-sensors
+        cd lm-sensors
+
+    make PROG_EXTRA=sensord all-prog-sensord
+    make PROG_EXTRA=sensord install-prog-sensord
+    make PROG_EXTRA=sensord clean
+}
+installs+=("install_sensord")
+
+
+config_ITGmania () {
     if [ -d /home/dance/itgmania ]; then rm -rf /home/dance/itgmania; done
     if [ -d /home/dance/.itgmania ]; then rm -rf /home/dance/.itgmania; done
 
@@ -171,16 +199,22 @@ configs+=("config_autologin")
 config_keybinds () {
     tee /home/dance/.xbindkeysrc <<EOF
 "uxterm"
-Control+alt + t
-Mod4 + t
+  Control+alt + t
+
+"guake -t"
+  Mod4 + Return
 
 "uxterm -e sudo /home/dance/tools/evhz"
-Mod4 + e
-Control + e
+  Mod4 + e
+  Control + e
+
+"uxterm -e sudo /home/dance/tools/usbprofileconfig.py"
+  Mod4 + u
+  Control + u
 
 "/home/dance/start.sh"
-Mod4 + s
-Control + s
+  Mod4 + s
+  Control + s
 EOF
 
 }
@@ -243,6 +277,7 @@ EOF
 #!/bin/bash
 
 tint2 &
+guake &
 exec ~/start.sh
 EOF
 
@@ -277,19 +312,29 @@ EOF
 configs+=("config_user")
 
 
+config_sensord () {
+    curl https://gist.githubusercontent.com/KokoseiJ/1837ba17c954465575364a606fcc8d11/raw/setup.sh | bash
+}
+configs+=("config_sensord")
+
+
 startup () {
     apt-mark hold linux-image-amd64 linux-headers-amd64 pulseaudio
 
     apt-get update && apt-get upgrade -y
 
     apt-get install -y \
-        sudo vim curl wget \
+        sudo vim curl wget python3 \
+        openssh-server \
         linux-headers-$(uname -r) \
         git make gcc \
-        xorg openbox tint2 thunar \
+        xorg openbox tint2 thunar guake \
         libasound2 apulse \
         libopengl0 libpulse0 \
-        xdotool xbindkeys
+        xdotool xbindkeys \
+        network-manager \
+        lighttpd sensors \
+        librrd-dev bison flex
 }
 
 
@@ -307,6 +352,18 @@ cleanup () {
 #libpulse0 and libopengl0 needed for barebone installation
 #maybe setup NetworkManager wifi setting script?
 
+clear
+echo "
+********************************
+* ITG Setup Script by KokoseiJ *
+*   Last Updated: 2023/05/25   *
+********************************
+
+Setup will start in 5 seconds.
+Press Ctrl+C now to abort and return to shell.
+"
+
+sleep 5
 
 startup
 
