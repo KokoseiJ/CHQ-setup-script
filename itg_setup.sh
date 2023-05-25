@@ -395,7 +395,8 @@ echo "Setup has been completed. The system will reboot in 10 seconds.
 Press Ctrl+C now to return to shell and review changes.
 
 Kernel is NOT update and WILL NOT BE updated until you manually do so!
-If you update the kernel, DO RUN THE SCRIPT AGAIN! PIUIO needs to be reinstalled.
+If you update the kernel, DO RUN THE SCRIPT AGAIN!
+PIUIO needs to be manually reinstalled.
 
 GLHF!
     -koko"
