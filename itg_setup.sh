@@ -1,160 +1,206 @@
-#!/bin/bash
-
-## ITG Setup Script, written by KokoseiJ (Wonjun Jung)
-##
-##    This is a test script, will prepare system to be up and running
-##  state but not quite enough for production run.
-##    This script assumes that the system is freshly installed debian,
-##  with `dance` user for running ITG and `/mnt/stepmania` with
-##  `/mnt/songs` partitions mounted.
-##
-## TODO: USB profile setup, polling rate, x11 shortcuts for maintenance
-
-# Erase CD-ROM source and install packages
-sed -i "s/#\? \?deb cdrom\:.*//" /etc/apt/sources.list
-apt update && apt upgrade -y
-
-# No pulseaudio!
-apt-mark hold pulseaudio pulseaudio-utils pavucontrol
-apt install -y vim curl wget git sudo libasound2 libasound2-plugins apulse alsa-utils xorg xfce4 openbox gcc make xz-utils
-
-# apt install -y openssl-server
-# apt install -y vim curl wget git sudo
-usermod -aG sudo,adm,systemd-journal dance
-
-# Installs a kernel and sets up GRUB for maintenance
-#curl 'https://liquorix.net/install-liquorix.sh' | bash
-sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"video=VGA-1:640x480\"/' /etc/default/grub
-sed -i 's/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/' /etc/default/grub
+installs=()
+configs=()
 
 
-# Fun stuff- grub background as ITG2 :P
-curl -L "https://github.com/JoseVarelaP/In-The-Groove2-SM5/raw/master/Graphics/ITG2%20Common%20fallback%20background.png" > /boot/itg2.png
-tee -a /etc/default/grub <<EOF
-GRUB_BACKGROUND=/boot/itg2.png
+install_ITGmania () {
+    latest_tag=$(curl -Ls -o /dev/null -w %{url_effective}\\n https://github.com/itgmania/itgmania/releases/latest | grep -oE "([0-9]+\.?)+")
+    ITGmania_url="https://github.com/itgmania/itgmania/releases/download/v${latest_tag}/ITGmania-${latest_tag}-Linux-no-songs.tar.gz"
+
+    curl $ITGmania_url | tar -xzf -
+
+    mkdir -p /mnt/stepmania/itgmania
+    mv ITGmania-*/itgmania/* /mnt/stepmania/itgmania/
+    rm -rf ITGmania-*
+}
+installs+=("install_ITGmania")
+
+
+install_PIUIO () {
+    mkdir -p /home/dance/src
+    cd /home/dance/src
+
+    if [ -d /home/dance/src/piuio ]; then
+        cd piuio
+        git pull
+        cd mod
+    else
+        git clone --depth 1 https://github.com/DinsFire64/piuio
+        cd piuio/mod
+    fi
+
+    make && make install
+    depmod -a
+}
+installs+=("install_PIUIO")
+
+
+install_evhz () {
+    mkdir -p /home/dance/src
+    cd /home/dance/src
+
+    if [ -d /home/dance/src/evhz ]; then
+        cd evhz
+        git pull
+    else
+        git clone --depth 1 https://github.com/geefr/evhz
+        cd evhz
+    fi
+
+    gcc -o evhz evhz.c
+
+    mkdir -p /home/dance/tools
+    mv evhz /home/dance/tools
+}
+installs+=("install_evhz")
+
+
+config_ITGmania() {
+    ln -s /mnt/stepmania/itgmania /home/dance/itgmania
+    mkdir -p /mnt/stepmania/itgmania_saves
+    ln -s /mnt/stepmania/itgmania_saves /home/dance/.itgmania
+
+    mkdir -p /mnt/songs/Songs
+    mkdir -p /mnt/songs/Courses
+    rm -rf /home/dance/itgmania/Songs /home/dance/itgmania/Courses
+    ln -s /mnt/songs/Songs /home/dance/itgmania/Songs
+    ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
+
+    chown -R dance:dance /mnt/itgmania
+    chown -R dance:dance /mnt/songs
+}
+configs+=("config_ITGmania")
+
+
+config_pollingrate() {
+    # https://github.com/geefr/stepmania-linux-goodies/wiki/So-You-Think-You-Have-Polling-Issues#polling-for-mice-and-joysticks
+
+    if ! grep "usbhid" /etc/default/grub > /dev/null; then
+        sed -i "s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*/& usbhid.mousepoll=1 usbhid.jspoll=1 usbhid.kbpoll=1/" /etc/default/grub
+    fi
+}
+configs+=("config_pollingrate")
+
+
+config_CRT () {
+    # Since dedicabs are usually running on CRT, there are some tricks needed to make the screen function properly
+    # GFXMODE helps set the framebuffer resolution. This sets the resolution for GRUB and tty framebuffer until KMS kicks in.
+    
+    if ! grep "GRUB_GFXMODE=" /etc/default/grub > /dev/null; then
+        tee -a /etc/default/grub <<EOF
 GRUB_GFXMODE=640x480
 GRUB_GFXPAYLOAD_LINUX=keep
 EOF
+    fi
 
-update-grub
+    # video argument for linux cmdline overrides KMS config, which doesn't work since CRT obviously lacks EDID info.
+    # This is effective until X11 kicks in, which requires its own config done in place.
+    if ! grep "video=VGA-1:640x480" /etc/default/grub > /dev/null; then
+        sed -i "s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*/& video=VGA-1:640x480/" /etc/default/grub
+    fi
 
-# Install PIUIO
-# apt install gcc make xz-tools
-cd /home/dance
-mkdir -p src && cd src
-git clone https://github.com/DinsFire64/piuio && cd piuio/mod
-make KDIR=/usr/src/linux-headers-*liquorix*
-# Since we're not yet running on liquorix kernel we have to juggle around
-# you MUST run depmod -a at least once after rebooting!
-make KDIR=/usr/src/linux-headers-*liquorix* DESTDIR=/home/dance/src/piuio/install install
-mv $(find /home/dance/src/piuio -name "updates") /lib/modules/*liquorix*
-rm -rf /home/dance/src/piuio/install
-tee -a /etc/modules <<EOF
-piuio
-EOF
-
-cd /home/dance
-
-# Setup autologin
-sed -i "s/#\?NAutoVTs=[0-9]\+/NAutoVTs=1/" /etc/systemd/logind.conf
-# /etc/systemd/system/getty@tty1.service.d/override.conf
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-
-tee /etc/systemd/system/getty@tty1.service.d/override.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --noclear --autologin dance %I \$TERM
-EOF
-
-systemctl daemon-reload && systemctl enable getty@tty1.service
-
-# Setup ALSA, some systems (Including CHQ cab) have a main device that is not
-# what the speaker is connected to, like graphics card
-# This can be corrected by either specifying the correct device to be default,
-# or changing modprobe.d/sound to force the correct device driver to load first
-# apt install -y libasound2 libasound2-plugins alsa-utils apulse
-usermod -aG audio dance
-
-# Setup Xserver, full installation of xfce4 might be changed to something else
-# apt install -y xorg xfce4 openbox
-systemctl set-default multi-user.target
-
-tee /etc/X11/xorg.conf.d/10-kortekcrt.conf <<EOF
+    # Sets the X11 monitor config. This config is taken fron Kortek CRT's out of range message, and should work with other dedicabs
+    tee /etc/X11/xorg.conf.d/10-kortekcrt.conf <<EOF
 Section "Monitor"
-	Identifier 	"VGA-0"
-	HorizSync 	30.0-40.0
-	VertRefresh 	47.0-160.0
-	Option 		"PreferredMode" "640x480"
+    Identifier  "VGA-0"
+    HorizSync   30.0-40.0
+    VertRefresh     47.0-160.0
+    Option      "PreferredMode" "640x480"
 EndSection
 EOF
+}
+configs+=("config_CRT")
 
-tee /home/dance/.xserverrc <<EOF
+
+config_grub() {
+    sed -i "s/GRUB_TIMEOUT=[0-9]*/GRUB_TIMEOUT=1/"
+
+    # Fun stuff: GRUB background as ITG2 :P
+
+    if ! grep "GRUB_BACKGROUND=" /etc/default/grub > /dev/null; then
+        curl -L "https://github.com/JoseVarelaP/In-The-Groove2-SM5/raw/master/Graphics/ITG2%20Common%20fallback%20background.png" > /boot/itg2.png
+        tee -a /etc/default/grub <<EOF
+GRUB_BACKGROUND=/boot/itg2.png
+EOF
+    fi
+
+    grub-update
+}
+configs+=("config_grub")
+
+
+config_keybinds () {
+    tee /home/dance/.xbindkeysrc <<EOF
+"uxterm"
+ctrl + alt + t
+
+"/home/dance/tools/evhz"
+ctrl + e
+EOF
+
+}
+configs+=("config_keybinds")
+
+
+config_xinit () {
+    tee /home/dance/.xserverrc <<EOF
 #!/bin/sh
 
 exec /usr/bin/X -nolisten tcp "\$@" vt\$XDG_VTNR
 EOF
-chmod +x /home/dance/.xserverrc
 
-# Setup ITGMania!
-cd /mnt/stepmania
-curl -L https://github.com/itgmania/itgmania/releases/download/v0.5.1/ITGmania-0.5.1-Linux-no-songs.tar.gz | tar -xzf -
-mv ITGmania-*/itgmania .
-rm -rf ITGmania-*
-ln -s /mnt/stepmania/itgmania /home/dance/itgmania
-mkdir -p /mnt/stepmania/itgmania_saves
-ln -s /mnt/stepmania/itgmania_saves /home/dance/.itgmania
-
-# Link songs folders to /home
-mkdir -p /mnt/songs/Songs
-mkdir -p /mnt/songs/Courses
-rm -rf /home/dance/itgmania/Songs /home/dance/itgmania/Courses
-ln -s /mnt/songs/Songs /home/dance/itgmania/Songs
-ln -s /mnt/songs/Courses /home/dance/itgmania/Courses
-
-# Setup stepmania autostart
-tee /home/dance/start.sh <<EOF
-#!/bin/bash
-xsetroot -solid '#2F68A6'
-while [ -z $(xset q | grep -oE "Caps Lock:[[:space:]]+on") ]
-do
-	itgmania/itgmania
-done
-
-xdotool key Caps_Lock
-
-xfdesktop &
-xfce4-panel &
-exec thunar
-EOF
-
-tee /home/dance/.xinitrc <<EOF
+    tee /home/dance/.xinitrc <<EOF
 #!/bin/sh
+
+xsetroot -solid "#3A6EA5"
 exec openbox-session
 EOF
 
-mkdir -p /home/dance/.config/openbox
-tee /home/dance/.config/openbox/autostart <<EOF
-#!/bin/bash
-exec ~/start.sh
+    chmod +x /home/dance/.xserverrc \
+             /home/dance/.xinitrc
+
+}
+configs+=("config_xinit")
+
+
+config_autologin () {
+    systemctl set-default multi-user.target
+
+    # Configures logind to open only single virtual terminal on startup
+    sed -i "s/#\?NAutoVTs=[0-9]\+/NAutoVTs=1/" /etc/systemd/logind.conf
+
+    # Creates getty drop-in for autologin
+    mkdir -p /etc/systemd/system/getty@tty1.service.d
+    tee /etc/systemd/system/getty@tty1.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --noclear --autologin dance tty1 \$TERM
 EOF
 
-cp /home/dance/.profile /home/dance/.profile.bak
+}
+configs+=("config_autologin")
 
-tee -a /home/dance/.profile <<EOF
+
+config_openbox () {
+    # Autostart x11 on startup
+    if [ -e /home/dance/.profile.bak ]; then
+        cp /home/dance/.profile.bak /home/dance/.profile
+    else
+        cp /home/dance/.profile /home/dance/.profile.bak
+    fi
+
+    tee -a /home/dance/.profile <<EOF
 
 # ===== Added by ITG setup script =====
 
-if [ -z $DISPLAY ] && [ \$(tty) = "/dev/tty1" ]; then
+if [ -z \$DISPLAY ] && [ \$(tty) -eq "/dev/tty1" ]; then
   echo "
-
-	*********************************
-	*      ITG Starting Up....      *
-	*                               *
-	* Barry & Koko & Vika was here! *
-	*        VRG 2022 ~ 2023        *
-	*********************************
-
-  "
+                       **********************************
+                       *       ITG Starting Up...       *
+                       *                                *
+                       * Barry & Koko & Vika was here!! *
+                       *        VRG  2022 ~ 2023        *
+                       **********************************
+"
   sleep 3
   # Append exec to make the tty die when session dies.
   # Without it user gets kicked out to tty when xfce gets logged out
@@ -162,24 +208,97 @@ if [ -z $DISPLAY ] && [ \$(tty) = "/dev/tty1" ]; then
 fi
 EOF
 
-chmod +x /home/dance/.xinitrc
-chmod +x /home/dance/.profile
-chmod +x /home/dance/start.sh
-chmod +x /home/dance/.config/openbox/autostart
+    # Setup stepmania autostart
 
-# Time to see if everything went to plan!
-apt autoremove -y
-chown -R dance:dance /home/dance
-chown -R dance:dance /mnt/songs
-chown -R dance:dance /mnt/stepmania
+    mkdir -p /home/dance/.config/openbox
+    tee /home/dance/.config/openbox/autostart <<EOF
+#!/bin/bash
+
+tint2 &
+exec ~/start.sh
+EOF
+
+    tee /home/dance/start.sh <<EOF
+#!/bin/bash
+
+while [ -z $(xset q | grep -oE "Caps Lock:[[:space:]]+on") ]
+do
+    itgmania/itgmania
+done
+
+xdotool key Caps_Lock
+thunar &
+EOF
+
+    chmod +x /home/dance/.profile \
+             /home/dance/.config/openbox/autostart \
+             /home/dance/start.sh
+}
+configs+=("config_openbox")
+
+
+config_user() {
+    chown -R dance:dance /home/dance
+    usermod -aG sudo,adm,systemd-journal,audio dance
+}
+configs+=("config_user")
+
+
+startup () {
+    apt-mark hold linux-image-amd64 linux-headers-amd64 pulseaudio
+
+    apt-get update && apt-get upgrade -y
+
+    apt-get install -y \
+        sudo vim curl wget \
+        linux-headers-$(uname -r) \
+        git make gcc \
+        xorg openbox tint2 \
+        libasound2 apulse \
+        libopengl0 libpulse0 \
+        xdotool xbindkeys
+}
+
+
+cleanup () {
+    apt autoremove -y
+}
+
+"""
+memo: use xbindkeys config for shortcuts
+make a function for initializing each config
+xsetroot -solid "#3A6EA5"
+use openbox + tint2, install only thunar for file explorer
+use xterm fancy terminals don't work well on CRT
+libpulse0 and libopengl0 needed for barebone installation
+maybe setup NetworkManager wifi setting script?
+"""
+
+
+startup
+
+for i in "${!installs[@]}"; do
+    printf "\\n[*] Running ${installs[$i]}...\\n\\n"
+
+    ${installs[$i]}
+
+    printf "\\n[*] Finished ${installs[$i]}\\n"
+
+
+for i in "${!configs[@]}"; do
+    printf "\\n[*] Running ${configs[$i]}...\\n\\n"
+
+    ${configs[$i]}
+
+    printf "\\n[*] Finished ${configs[$i]}\\n"
+
+cleanup
 
 echo "Setup has been completed. The system will reboot in 10 seconds.
 Press Ctrl+C now to return to shell and review changes.
 
-!!! PIUIO driver installation is not done yet !!!
-You MUST run \`depmod -a\` and \`modprobe piuio\` to
-load the driver at least once.
-After running depmod, it should load on boot automatically.
+Kernel is NOT update and WILL NOT BE updated until you manually do so!
+If you update the kernel, DO RUN THE SCRIPT AGAIN! PIUIO needs to be reinstalled.
 
 GLHF!
     -koko"
