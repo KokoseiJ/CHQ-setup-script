@@ -143,14 +143,14 @@ config_CRT () {
 
     # video argument for linux cmdline overrides KMS config, which doesn't work since CRT obviously lacks EDID info.
     # This is effective until X11 kicks in, which requires its own config done in place.
-    if ! grep "video=VGA-1:640x480" /etc/default/grub > /dev/null; then
+    if ! grep "video=640x480" /etc/default/grub > /dev/null; then
         sed -i "s/GRUB_CMDLINE_LINUX_DEFAULT=\"[^\"]*/& video=VGA-1:640x480/" /etc/default/grub
     fi
 
     # Sets the X11 monitor config. This config is taken fron Kortek CRT's out of range message, and should work with other dedicabs
     tee /etc/X11/xorg.conf.d/10-kortekcrt.conf <<EOF
 Section "Monitor"
-    Identifier  "VGA-0"
+    Identifier  "DVI-I-0"
     HorizSync   30.0-40.0
     VertRefresh     47.0-160.0
     Option      "PreferredMode" "640x480"
