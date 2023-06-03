@@ -215,6 +215,10 @@ config_keybinds () {
   Control + s
 EOF
 
+    # openbox default keybind collides with evhz shortcut
+    mkdir -p /home/dance/.config/openbox
+    sed "s/W-e//g" /etc/xdg/openbox/rc.xml | tee /home/dance/.config/openbox/rc.xml
+
 }
 configs+=("config_keybinds")
 
