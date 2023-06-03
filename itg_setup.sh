@@ -314,7 +314,6 @@ configs+=("config_user")
 config_sensord () {
     curl https://gist.githubusercontent.com/KokoseiJ/1837ba17c954465575364a606fcc8d11/raw/setup.sh | bash
 }
-configs+=("config_sensord")
 
 
 startup () {
@@ -332,7 +331,6 @@ startup () {
         libopengl0 libpulse0 \
         xdotool xbindkeys \
         network-manager \
-        lighttpd sensors \
         librrd-dev bison flex
 }
 
